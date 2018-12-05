@@ -20,7 +20,7 @@ import (
 
 var (
 	// Window is the glfw.Window used for engo
-	Window *glfw.Window
+	window *glfw.Window
 	// Gl is the current OpenGL context
 	Gl *gl.Context
 
@@ -105,32 +105,32 @@ func CreateWindow(title string, width, height int, fullscreen bool, msaa int) {
 		return
 	}
 
-	Window, err = glfw.CreateWindow(width, height, title, monitor, nil)
+	window, err = glfw.CreateWindow(width, height, title, monitor, nil)
 	fatalErr(err)
 
-	Window.MakeContextCurrent()
+	window.MakeContextCurrent()
 
 	if !fullscreen {
-		Window.SetPos((mode.Width-width)/2, (mode.Height-height)/2)
+		window.SetPos((mode.Width-width)/2, (mode.Height-height)/2)
 	}
 
 	SetVSync(opts.VSync)
 
 	Gl = gl.NewContext()
 
-	width, height = Window.GetSize()
+	width, height = window.GetSize()
 	windowWidth, windowHeight = float32(width), float32(height)
 
-	fw, fh := Window.GetFramebufferSize()
+	fw, fh := window.GetFramebufferSize()
 	canvasWidth, canvasHeight = float32(fw), float32(fh)
 
 	if windowWidth <= canvasWidth && windowHeight <= canvasHeight {
 		scale = canvasWidth / windowWidth
 	}
 
-	Window.SetFramebufferSizeCallback(func(Window *glfw.Window, w, h int) {
+	window.SetFramebufferSizeCallback(func(window *glfw.Window, w, h int) {
 		Gl.Viewport(0, 0, w, h)
-		width, height = Window.GetSize()
+		width, height = window.GetSize()
 		windowWidth, windowHeight = float32(width), float32(width)
 
 		oldCanvasW, oldCanvasH := canvasWidth, canvasHeight
@@ -145,15 +145,15 @@ func CreateWindow(title string, width, height int, fullscreen bool, msaa int) {
 		}
 	})
 
-	Window.SetCursorPosCallback(func(Window *glfw.Window, x, y float64) {
+	window.SetCursorPosCallback(func(window *glfw.Window, x, y float64) {
 		Input.Mouse.X, Input.Mouse.Y = float32(x)/opts.GlobalScale.X, float32(y)/opts.GlobalScale.Y
 		if Input.Mouse.Action != Release && Input.Mouse.Action != Press {
 			Input.Mouse.Action = Move
 		}
 	})
 
-	Window.SetMouseButtonCallback(func(Window *glfw.Window, b glfw.MouseButton, a glfw.Action, m glfw.ModifierKey) {
-		x, y := Window.GetCursorPos()
+	window.SetMouseButtonCallback(func(window *glfw.Window, b glfw.MouseButton, a glfw.Action, m glfw.ModifierKey) {
+		x, y := window.GetCursorPos()
 		Input.Mouse.X, Input.Mouse.Y = float32(x)/(opts.GlobalScale.X), float32(y)/(opts.GlobalScale.Y)
 
 		// this is only valid because we use an internal structure that is
@@ -168,12 +168,12 @@ func CreateWindow(title string, width, height int, fullscreen bool, msaa int) {
 		}
 	})
 
-	Window.SetScrollCallback(func(Window *glfw.Window, xoff, yoff float64) {
+	window.SetScrollCallback(func(Window *glfw.Window, xoff, yoff float64) {
 		Input.Mouse.ScrollX = float32(xoff)
 		Input.Mouse.ScrollY = float32(yoff)
 	})
 
-	Window.SetKeyCallback(func(Window *glfw.Window, k glfw.Key, s int, a glfw.Action, m glfw.ModifierKey) {
+	window.SetKeyCallback(func(window *glfw.Window, k glfw.Key, s int, a glfw.Action, m glfw.ModifierKey) {
 		key := Key(k)
 		if a == glfw.Press {
 			Input.keys.Set(key, true)
@@ -182,7 +182,7 @@ func CreateWindow(title string, width, height int, fullscreen bool, msaa int) {
 		}
 	})
 
-	Window.SetSizeCallback(func(w *glfw.Window, widthInt int, heightInt int) {
+	window.SetSizeCallback(func(w *glfw.Window, widthInt int, heightInt int) {
 		message := WindowResizeMessage{
 			OldWidth:  int(windowWidth),
 			OldHeight: int(windowHeight),
@@ -194,7 +194,7 @@ func CreateWindow(title string, width, height int, fullscreen bool, msaa int) {
 		windowHeight = float32(heightInt)
 
 		// TODO: verify these for retina displays & verify if needed here
-		fw, fh := Window.GetFramebufferSize()
+		fw, fh := window.GetFramebufferSize()
 		canvasWidth, canvasHeight = float32(fw), float32(fh)
 
 		if !opts.ScaleOnResize {
@@ -204,7 +204,7 @@ func CreateWindow(title string, width, height int, fullscreen bool, msaa int) {
 		Mailbox.Dispatch(message)
 	})
 
-	Window.SetCharCallback(func(Window *glfw.Window, char rune) {
+	window.SetCharCallback(func(window *glfw.Window, char rune) {
 		// TODO: what does this do, when can we use it?
 		// it's like KeyCallback, but for specific characters instead of keys...?
 		// responder.Type(char)
@@ -221,7 +221,7 @@ func SetTitle(title string) {
 	if opts.HeadlessMode {
 		log.Println("Title set to:", title)
 	} else {
-		Window.SetTitle(title)
+		window.SetTitle(title)
 	}
 }
 
@@ -244,8 +244,8 @@ func RunIteration() {
 		Input.Mouse.ScrollX, Input.Mouse.ScrollY = 0, 0
 		Input.Mouse.Action = Neutral
 
-		glfwMojaveFix.UpdateNSGLContext(*Window)
-		Window.SwapBuffers()
+		glfwMojaveFix.UpdateNSGLContext(*window)
+		window.SwapBuffers()
 	}
 }
 
@@ -281,7 +281,7 @@ Outer:
 				break Outer
 			}
 			closerMutex.RUnlock()
-			if !headless && Window.ShouldClose() {
+			if !headless && window.ShouldClose() {
 				closeEvent()
 			}
 		case <-resetLoopTicker:
@@ -294,13 +294,13 @@ Outer:
 
 // CursorPos returns the current cursor position
 func CursorPos() (x, y float32) {
-	w, h := Window.GetCursorPos()
+	w, h := window.GetCursorPos()
 	return float32(w), float32(h)
 }
 
 // WindowSize gets the current window size
 func WindowSize() (w, h int) {
-	return Window.GetSize()
+	return window.GetSize()
 }
 
 // WindowWidth gets the current window width
@@ -347,7 +347,7 @@ func SetCursor(c Cursor) {
 	case CursorVResize:
 		cur = cursorVResize
 	}
-	Window.SetCursor(cur)
+	window.SetCursor(cur)
 }
 
 // SetVSync sets whether or not to use VSync

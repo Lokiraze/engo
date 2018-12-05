@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"engo.io/gl"
+	vk "github.com/vulkan-go/vulkan"
 
 	"github.com/Noofbiz/sdlMojaveFix"
 	"github.com/veandco/go-sdl2/sdl"
@@ -19,7 +20,7 @@ import (
 
 var (
 	// Window is the sdl Window used for engo
-	Window *sdl.Window
+	window *sdl.Window
 
 	cursorNone      *sdl.Cursor
 	cursorArrow     *sdl.Cursor
@@ -64,25 +65,30 @@ func CreateWindow(title string, width, height int, fullscreen bool, msaa int) {
 	}
 
 	if opts.UseVulkan {
-		Window, err = sdl.CreateWindow(title, sdl.WINDOWPOS_UNDEFINED,
+		err = sdl.VulkanLoadLibrary("")
+		fatalErr(err)
+		vk.SetGetInstanceProcAddr(sdl.VulkanGetVkGetInstanceProcAddr())
+		err = vk.Init()
+		fatalErr(err)
+		window, err = sdl.CreateWindow(title, sdl.WINDOWPOS_UNDEFINED,
 			sdl.WINDOWPOS_UNDEFINED, int32(width), int32(height), sdl.WINDOW_VULKAN)
 		fatalErr(err)
 
 		if fullscreen {
-			Window.SetFullscreen(sdl.WINDOW_FULLSCREEN)
+			window.SetFullscreen(sdl.WINDOW_FULLSCREEN)
 		}
 		if opts.NotResizable {
-			Window.SetResizable(false)
+			window.SetResizable(false)
 		} else {
-			Window.SetResizable(true)
+			window.SetResizable(true)
 		}
 
 		gameWidth, gameHeight = float32(width), float32(height)
 
-		w, h := Window.GetSize()
+		w, h := window.GetSize()
 		windowWidth, windowHeight = float32(w), float32(h)
 
-		fw, fh := Window.VulkanGetDrawableSize()
+		fw, fh := window.VulkanGetDrawableSize()
 		canvasWidth, canvasHeight = float32(fw), float32(fh)
 
 		if windowWidth <= canvasWidth && windowHeight <= canvasHeight {
@@ -99,30 +105,30 @@ func CreateWindow(title string, width, height int, fullscreen bool, msaa int) {
 
 		SetVSync(opts.VSync)
 
-		Window, err = sdl.CreateWindow(title, sdl.WINDOWPOS_UNDEFINED,
+		window, err = sdl.CreateWindow(title, sdl.WINDOWPOS_UNDEFINED,
 			sdl.WINDOWPOS_UNDEFINED, int32(width), int32(height), sdl.WINDOW_OPENGL)
 		fatalErr(err)
 
-		sdlGLContext, err = Window.GLCreateContext()
+		sdlGLContext, err = window.GLCreateContext()
 		fatalErr(err)
 
 		Gl = gl.NewContext()
 
 		if fullscreen {
-			Window.SetFullscreen(sdl.WINDOW_FULLSCREEN)
+			window.SetFullscreen(sdl.WINDOW_FULLSCREEN)
 		}
 		if opts.NotResizable {
-			Window.SetResizable(false)
+			window.SetResizable(false)
 		} else {
-			Window.SetResizable(true)
+			window.SetResizable(true)
 		}
 
 		gameWidth, gameHeight = float32(width), float32(height)
 
-		w, h := Window.GetSize()
+		w, h := window.GetSize()
 		windowWidth, windowHeight = float32(w), float32(h)
 
-		fw, fh := Window.GLGetDrawableSize()
+		fw, fh := window.GLGetDrawableSize()
 		canvasWidth, canvasHeight = float32(fw), float32(fh)
 
 		if windowWidth <= canvasWidth && windowHeight <= canvasHeight {
@@ -134,7 +140,7 @@ func CreateWindow(title string, width, height int, fullscreen bool, msaa int) {
 // DestroyWindow handles the termination of windows
 func DestroyWindow() {
 	sdl.GLDeleteContext(sdlGLContext)
-	Window.Destroy()
+	window.Destroy()
 	sdl.Quit()
 }
 
@@ -143,7 +149,7 @@ func SetTitle(title string) {
 	if opts.HeadlessMode {
 		log.Println("Title set to:", title)
 	} else {
-		Window.SetTitle(title)
+		window.SetTitle(title)
 	}
 }
 
@@ -203,8 +209,8 @@ func RunIteration() {
 			case *sdl.WindowEvent:
 				if e.Event == sdl.WINDOWEVENT_RESIZED {
 					if opts.UseVulkan {
-						w, h := Window.GetSize()
-						fw, fh := Window.VulkanGetDrawableSize()
+						w, h := window.GetSize()
+						fw, fh := window.VulkanGetDrawableSize()
 
 						message := WindowResizeMessage{
 							OldWidth:  int(windowWidth),
@@ -228,8 +234,8 @@ func RunIteration() {
 						}
 						Mailbox.Dispatch(message)
 					} else {
-						w, h := Window.GetSize()
-						fw, fh := Window.GLGetDrawableSize()
+						w, h := window.GetSize()
+						fw, fh := window.GLGetDrawableSize()
 
 						message := WindowResizeMessage{
 							OldWidth:  int(windowWidth),
@@ -275,7 +281,7 @@ func RunIteration() {
 		sdlMojaveFix.UpdateNSGLContext(sdlGLContext)
 
 		if !opts.UseVulkan {
-			Window.GLSwap()
+			window.GLSwap()
 		}
 	}
 }
@@ -329,7 +335,7 @@ func CursorPos() (x, y float32) {
 
 // WindowSize gets the current window size
 func WindowSize() (w, h int) {
-	width, height := Window.GetSize()
+	width, height := window.GetSize()
 	return int(width), int(height)
 }
 
